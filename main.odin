@@ -45,11 +45,11 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	// TODO 3: load your tileset ONCE, here - never inside the loop.
-	// tiles := rl.LoadTexture(TILES_PATH)
-	// defer rl.UnloadTexture(tiles)
+	tiles := rl.LoadTexture(TILES_PATH)
+	defer rl.UnloadTexture(tiles)
 	// Optional: your hero.png from sprite-hero, the same way.
-	// hero := rl.LoadTexture(HERO_PATH)
-	// defer rl.UnloadTexture(hero)
+	hero := rl.LoadTexture(HERO_PATH)
+	defer rl.UnloadTexture(hero)
 
 	level, level_ok := load_level()
 	defer unload_level(&level)
@@ -63,6 +63,7 @@ main :: proc() {
 		zoom   = ZOOM,
 	}
 	total_coins := len(level.coins)
+  total_flowers := len(level.flowers)
 	debug := false
 
 	for !rl.WindowShouldClose() {
@@ -94,12 +95,30 @@ main :: proc() {
 		// TODO 7: right now the player walks through walls. Only take the step
 		// if can_be_at(&level, <the new position>) says yes. Do x and y
 		// separately, so the player slides along a wall instead of sticking.
-		player.pos += step
+		if can_be_at(&level, player.pos + {step[0], 0}) {
+      player.pos += {step[0], 0}
+    }
+    if can_be_at(&level, player.pos + {0, step[1]}) {
+      player.pos += {0, step[1]}
+    }
+
 
 		// TODO 8: take every coin the player is close enough to (COIN_REACH).
 		// linalg.distance(a, b) is the distance between two points;
 		// unordered_remove(&level.coins, i) removes coin i. Loop BACKWARDS
 		// (#reverse for coin, i in level.coins) when you remove while looping.
+    for coin, i in level.coins {
+      if linalg.distance(player.pos, coin) <= COIN_REACH {
+        unordered_remove(&level.coins, i)
+      }
+    }
+
+    for flower, i in level.flowers {
+      if linalg.distance(player.pos, flower + 8.0) <= 8.0 {
+        unordered_remove(&level.flowers, i)
+      }
+    }
+
 
 		// Follow the player. Snap to whole SCREEN pixels so tiles do not shimmer.
 		cam.target = {math.round(player.pos.x * ZOOM) / ZOOM, math.round(player.pos.y * ZOOM) / ZOOM}
@@ -112,13 +131,20 @@ main :: proc() {
 		// TODO 6: draw the level. For every t in level.tiles, draw the
 		// rectangle t.src of your tileset at t.pos:
 		//     rl.DrawTextureRec(tiles, t.src, t.pos, rl.WHITE)
+    for tile in level.tiles {
+      rl.DrawTextureRec(tiles, tile.src, tile.pos, rl.WHITE)
+    }
 
 		for coin in level.coins do rl.DrawCircleV(coin, 4, rl.GOLD)
+
+    for flower in level.flowers do rl.DrawTextureRec(tiles, {48, 0, 16, 16}, flower, rl.WHITE)
 
 		// The player. Optional: draw your hero.png instead of the square:
 		//     w, h := f32(hero.width), f32(hero.height)
 		//     rl.DrawTexturePro(hero, {0, 0, w, h}, {player.pos.x, player.pos.y, w, h}, {w / 2, h / 2}, 0, rl.WHITE)
-		rl.DrawRectangleV(player.pos - HALF, HALF * 2, rl.BLUE)
+		// rl.DrawRectangleV(player.pos - HALF, HALF * 2, rl.BLUE)
+	  // rl.DrawTextureRec(hero, {0, 0, 16, 16}, player.pos - HALF, rl.WHITE)
+    rl.DrawTexturePro(hero, {0, 0, 16, 16}, {player.pos.x, player.pos.y, 16, 16}, {16 / 2, 16 / 2}, 0, rl.WHITE)
 
 		if debug {
 			for solid, i in level.solid {
@@ -134,7 +160,7 @@ main :: proc() {
 		if !level_ok {
 			rl.DrawText("No level yet: paint one in LDtk and save it as levels/level.ldtk", 16, 16, 24, rl.WHITE)
 		} else {
-			rl.DrawText(fmt.ctprintf("coins %d / %d", total_coins - len(level.coins), total_coins), 16, 16, 30, rl.WHITE)
+			rl.DrawText(fmt.ctprintf("coins %d / %d   flowers %d / %d", total_coins - len(level.coins), total_coins, total_flowers - len(level.flowers), total_flowers), 16, 16, 30, rl.WHITE)
 		}
 		rl.DrawText("WASD / arrows: move   F1: debug   F5: reload the level", 16, WINDOW_H - 36, 20, rl.LIGHTGRAY)
 		rl.EndDrawing()

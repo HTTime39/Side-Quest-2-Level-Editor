@@ -64,6 +64,7 @@ Level :: struct {
 	grid:       f32,
 	start:      rl.Vector2, // centre of the PlayerStart cell
 	coins:      [dynamic]rl.Vector2, // centre of every Coin cell
+  flowers:    [dynamic]rl.Vector2,
 }
 
 load_level :: proc() -> (lv: Level, ok: bool) {
@@ -99,9 +100,14 @@ load_level :: proc() -> (lv: Level, ok: bool) {
 		case "Walls":
 			// TODO 4: fill lv.solid - one bool per cell, true when the cell is a wall.
 			//   - copy the size first:  lv.cols, lv.rows, lv.grid = layer.cols, layer.rows, size
+      lv.cols, lv.rows, lv.grid = layer.cols, layer.rows, size
 			//   - make the array:       lv.solid = make([]bool, len(layer.int_grid))
+      lv.solid = make([]bool, len(layer.int_grid))
 			//   - layer.int_grid holds one number per cell, row by row. In LDtk you
 			//     painted walls with the value 1; every other cell is 0.
+      for value, i in layer.int_grid {
+        lv.solid[i] = value == 1
+      }
 			// Check it: press F1 in the game. Every wall cell gets a red outline.
 
 		case "Entities":
@@ -109,6 +115,15 @@ load_level :: proc() -> (lv: Level, ok: bool) {
 			// cell (e.cell). cell_centre(e.cell, size) gives its world position.
 			//   - "PlayerStart" -> lv.start
 			//   - every "Coin"  -> append(&lv.coins, ...)
+      for entity in layer.entities {
+        if entity.identifier == "PlayerStart" {
+		      lv.start = cell_centre(entity.cell, size)
+        } else if entity.identifier == "Coin" {
+          append(&lv.coins, cell_centre(entity.cell, size))
+        } else if entity.identifier == "Flower" {
+          append(&lv.flowers, cell_centre(entity.cell, 16))
+        }
+      }
 			// Check it: the player appears where you put PlayerStart, and a gold
 			// circle appears on every Coin.
 		}
